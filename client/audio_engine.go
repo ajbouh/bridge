@@ -7,7 +7,6 @@ import (
 
 	"github.com/GRVYDEV/S.A.T.U.R.D.A.Y/client/internal"
 	stt "github.com/GRVYDEV/S.A.T.U.R.D.A.Y/stt/engine"
-	tts "github.com/GRVYDEV/S.A.T.U.R.D.A.Y/tts/engine"
 
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v3/pkg/media"
@@ -38,13 +37,12 @@ type AudioEngine struct {
 
 	firstTimeStamp uint32
 	sttEngine      *stt.Engine
-	ttsEngine      *tts.Engine
 
 	// shouldInfer determines if we should run TTS inference or not
 	shouldInfer atomic.Bool
 }
 
-func NewAudioEngine(sttEngine *stt.Engine, ttsEngine *tts.Engine) (*AudioEngine, error) {
+func NewAudioEngine(sttEngine *stt.Engine) (*AudioEngine, error) {
 	dec, err := internal.NewOpusDecoder(sampleRate, channels)
 	if err != nil {
 		return nil, err
@@ -67,15 +65,8 @@ func NewAudioEngine(sttEngine *stt.Engine, ttsEngine *tts.Engine) (*AudioEngine,
 		dec:            dec,
 		enc:            enc,
 		sttEngine:      sttEngine,
-		ttsEngine:      ttsEngine,
 		firstTimeStamp: 0,
 		shouldInfer:    shouldInfer,
-	}
-
-	if ttsEngine != nil {
-		ttsEngine.OnAudioChunk(func(chunk tts.AudioChunk) {
-			ae.Encode(chunk.Data, chunk.ChannelCount, chunk.SampleRate)
-		})
 	}
 
 	return ae, nil
@@ -92,18 +83,6 @@ func (a *AudioEngine) MediaOut() <-chan media.Sample {
 func (a *AudioEngine) Start() {
 	Logger.Info("Starting audio engine")
 	go a.decode()
-}
-
-// Pause stops the text to speech inference and simply drops incoming packets
-func (a *AudioEngine) Pause() {
-	Logger.Info("Pausing tts")
-	a.shouldInfer.Swap(false)
-}
-
-// Unpause restarts the text to speech inference
-func (a *AudioEngine) Unpause() {
-	Logger.Info("Unpausing tts")
-	a.shouldInfer.Swap(true)
 }
 
 // Encode takes in raw f32le pcm, encodes it into opus RTP packets and sends those over the rtpOut chan
@@ -128,7 +107,7 @@ func (a *AudioEngine) sendMedia(frames []internal.OpusFrame) {
 	}
 
 	// start inferring audio again
-	a.Unpause()
+	// a.Unpause()
 }
 
 func convertOpusToSample(frame internal.OpusFrame) media.Sample {

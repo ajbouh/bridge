@@ -26,7 +26,7 @@ endif
 
 run-whisper-cpp: whisper-cpp-pre-reqs
 	@echo "running client with whisper.cpp backend..."
-	@C_INCLUDE_PATH=${INCLUDE_PATH} LIBRARY_PATH=${LIBRARY_PATH} go run cmd/whisper.cpp/main.go
+	@C_INCLUDE_PATH=${INCLUDE_PATH} LIBRARY_PATH=${LIBRARY_PATH} go run cmd/main.go
 
 run-http:
 	@echo "running client with http backend..."
@@ -41,4 +41,4 @@ run: run-whisper-cpp
 endif
 
 debug: whisper-cpp-pre-reqs
-	@C_INCLUDE_PATH=${INCLUDE_PATH} LIBRARY_PATH=${LIBRARY_PATH} PKG_CONFIG_PATH= go run cmd/whisper.cpp/main.go --debug=true
+	@C_INCLUDE_PATH=${INCLUDE_PATH} LIBRARY_PATH=${LIBRARY_PATH} PKG_CONFIG_PATH= go run cmd/main.go --debug=true

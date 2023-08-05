@@ -3,11 +3,9 @@ import numpy as np
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
-from faster_whisper import WhisperModel
+from model import model
 
 app = FastAPI()
-model = WhisperModel("small", device="cpu", compute_type="int8")
-
 
 class TranscriptionSegment(BaseModel):
     startTimestamp: int

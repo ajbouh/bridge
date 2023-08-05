@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"net/url"
+	"sync"
 
 	"github.com/gorilla/websocket"
 	"github.com/pion/webrtc/v3"
@@ -57,12 +58,15 @@ type SocketConnection struct {
 	onAnswer func(ans webrtc.SessionDescription) error
 	// called when we get a remote candidate
 	onTrickle func(candidate webrtc.ICECandidateInit, target int) error
+
+	wsWriteMutex *sync.Mutex
 }
 
 func NewSocketConnection(url url.URL) *SocketConnection {
 	return &SocketConnection{
-		url:  url,
-		done: make(chan int),
+		url:          url,
+		done:         make(chan int),
+		wsWriteMutex: &sync.Mutex{},
 	}
 }
 
@@ -239,6 +243,9 @@ func (s *SocketConnection) SendAnswer(answer webrtc.SessionDescription) error {
 }
 
 func (s *SocketConnection) sendMessage(msg any) error {
+	s.wsWriteMutex.Lock()
+	defer s.wsWriteMutex.Unlock()
+
 	payload, err := json.Marshal(msg)
 	if err != nil {
 		Logger.Errorf(err, "Error marshaling message to json %+v", msg)

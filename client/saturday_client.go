@@ -6,7 +6,6 @@ import (
 
 	logr "github.com/GRVYDEV/S.A.T.U.R.D.A.Y/log"
 	stt "github.com/GRVYDEV/S.A.T.U.R.D.A.Y/stt/engine"
-	tts "github.com/GRVYDEV/S.A.T.U.R.D.A.Y/tts/engine"
 
 	"github.com/pion/webrtc/v3"
 )
@@ -20,8 +19,6 @@ type SaturdayConfig struct {
 	Url url.URL
 	// STT engine to generate transcriptions
 	SttEngine *stt.Engine
-	// TTS engine to generate audio
-	TtsEngine *tts.Engine
 
 	// channel used to send transcription segments over the data channel
 	// any transcription segment sent on this channel with be sent over the data channel
@@ -40,7 +37,7 @@ func NewSaturdayClient(config SaturdayConfig) (*SaturdayClient, error) {
 	if config.SttEngine == nil {
 		return nil, errors.New("SttEngine cannot be nil")
 	}
-	ae, err := NewAudioEngine(config.SttEngine, config.TtsEngine)
+	ae, err := NewAudioEngine(config.SttEngine)
 	if err != nil {
 		return nil, err
 	}
@@ -71,14 +68,6 @@ func NewSaturdayClient(config SaturdayConfig) (*SaturdayClient, error) {
 	s.ws.SetOnTrickle(s.rtc.OnTrickle)
 
 	return s, nil
-}
-
-func (s *SaturdayClient) PauseTTS() {
-	s.ae.Pause()
-}
-
-func (s *SaturdayClient) UnpauseTTS() {
-	s.ae.Unpause()
 }
 
 func (s *SaturdayClient) OnAnswer(answer webrtc.SessionDescription) error {

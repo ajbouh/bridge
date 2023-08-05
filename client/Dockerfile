@@ -7,8 +7,7 @@ WORKDIR /app
 
 COPY ./. .
 
-# Build the application
-RUN go build -o client cmd/http/main.go
+RUN go build -o client cmd/main.go
 
 # Start a new stage from scratch
 FROM golang:1.20
@@ -17,11 +16,7 @@ RUN apt-get update
 RUN apt-get install pkg-config libopus-dev libopusfile-dev -y
 # Copy the pre-built binary file from the previous stage
 COPY --from=builder /app/client ./client
-
-# Set the environment variable
-ENV URL="localhost:8088"
-ENV ROOM="test"
-ENV TRASCRIPTION_SERVICE="localhost:8000"
+# COPY models models
 
 # Run the binary program produced by `go install`
 CMD ["./client"]
