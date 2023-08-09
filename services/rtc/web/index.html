@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>bridge</title>
+    <style type="text/css">
+      #media #local {
+        transform: translate(-50%, -50%);
+        width: 50%;
+      }
+      video {
+        transform: rotateY(180deg);
+        -webkit-transform: rotateY(180deg); /* Safari and Chrome */
+        -moz-transform: rotateY(180deg); /* Firefox */
+      }
+    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="./index.js"></script>
+  </head>
+
+  <body class="bg-gray-900 antialiased">
+    <div class="flex flex-col mx-auto h-screen w-full" style="max-width: 80ex">
+      <div class="flex flex-wrap px-6 mt-4">
+        <h1 class="text-3xl font-bold my-2 text-white grow">bridge</h1>
+    
+        <div class="flex space-x-2">
+          <select name="mic" id="mic"
+            class="py-2 px-3 pr-9 border border-gray-600 rounded-md text-md focus:border-blue-500 focus:ring-blue-500 bg-gray-700 text-gray-400"
+            disabled>
+            <option selected disabled>Choose your mic</option>
+          </select>
+    
+          <button name="mic-mute" id="mic-mute"
+            class="p-2 border border-gray-600 rounded-md text-md focus:border-blue-500 focus:ring-blue-500 bg-gray-700 text-gray-400">
+            Mute
+          </button>
+        </div>
+    
+    
+      </div>
+      <div class="flex flex-col px-6">
+        <h2 class="text-sm font-semibold my-4 uppercase text-white">Transcription</h2>
+        <pre id="transcriptions"
+          class="text-lg text-gray-400 p-4 border-2 border-gray-700 rounded-md whitespace-break-spaces"></pre>
+        <audio id="saturday-audio" hidden autoplay></audio>
+      </div>
+    </div>
+  </body>
+</html>

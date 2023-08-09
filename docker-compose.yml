@@ -3,35 +3,32 @@ version: "3.8"
 services:
   web_server:
     build:
-      context: ./rtc
-      # dockerfile: ./rtc/Dockerfile
+      dockerfile: ./services/rtc/Dockerfile
     ports:
       - "8088:8088"
+    # environment:
+    #   TRANSCRIPTION_SERVICE: http://transcription_service:8000/transcribe
 
   audio_client_parser:
     restart: "on-failure"
     build:
-      context: ./client
-      # dockerfile: ./client/Dockerfile
+      dockerfile: ./services/client/Dockerfile
     depends_on:
       - web_server
       - transcription_service
     environment:
       URL: web_server:8088
       ROOM: test
-      TRANSCRIPTION_SERVICE: http://transcription_service:8000/
+      TRANSCRIPTION_SERVICE: http://transcription_service:8000/transcribe
 
   transcription_service:
     restart: "on-failure"
     build:
-      context: ./stt/servers/faster-whisper-api
-      # dockerfile: ./stt/servers/faster-whisper-api/Dockerfile
+      context: ./services/transcribe
       args:
-        MODEL_SIZE: medium
-        MODEL_DEVICE: cuda
-        MODEL_COMPUTE_TYPE: float16
+        MODEL_SIZE: large-v2
     environment:
-      MODEL_SIZE: medium
+      MODEL_SIZE: large-v2
       MODEL_DEVICE: cuda
       MODEL_COMPUTE_TYPE: float16
     depends_on:
