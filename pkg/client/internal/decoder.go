@@ -4,6 +4,7 @@ import "gopkg.in/hraban/opus.v2"
 
 type OpusDecoder struct {
 	dec *opus.Decoder
+}
 
 func NewOpusDecoder(sampleRate, channels int) (*OpusDecoder, error) {
 	dec, err := opus.NewDecoder(sampleRate, channels)
@@ -12,7 +13,7 @@ func NewOpusDecoder(sampleRate, channels int) (*OpusDecoder, error) {
 	}
 
 	return &OpusDecoder{
-		dec:        dec,
+		dec: dec,
 	}, nil
 }
 
