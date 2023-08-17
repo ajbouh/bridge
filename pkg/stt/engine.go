@@ -141,7 +141,7 @@ func (e *Engine) writeVAD(pcm []float32, timestamp uint32) {
 			e.pcmWindow = e.pcmWindow[:0]
 		}()
 
-		isSpeaking := VAD(e.pcmWindow)
+		isSpeaking, energy, silence := VAD(e.pcmWindow)
 
 		defer func() {
 			e.isSpeaking = isSpeaking
@@ -187,7 +187,7 @@ func (e *Engine) writeVAD(pcm []float32, timestamp uint32) {
 				e.window = e.window[:0]
 			}
 			// not speaking do nothing
-			Logger.Debug("NOT SPEAKING")
+			Logger.Debugf("NOT SPEAKING energy=%#v (energyThreshold=%#v) silence=%#v (silenceThreshold=%#v) ", energy, energyThresh, silence, silenceThresh)
 			return
 		}
 	}
@@ -195,18 +195,13 @@ func (e *Engine) writeVAD(pcm []float32, timestamp uint32) {
 
 // NOTE This is a very rough implemntation. We should improve it :D
 // VAD performs voice activity detection on a frame of audio data.
-func VAD(frame []float32) bool {
+func VAD(frame []float32) (bool, float32, float32) {
 	// Compute frame energy
 	energy := float32(0)
 	for i := 0; i < len(frame); i++ {
 		energy += frame[i] * frame[i]
 	}
 	energy /= float32(len(frame))
-
-	// Apply energy threshold
-	if energy < energyThresh {
-		return false
-	}
 
 	// Compute frame silence
 	silence := float32(0)
@@ -215,10 +210,15 @@ func VAD(frame []float32) bool {
 	}
 	silence /= float32(len(frame))
 
-	// Apply silence threshold
-	if silence < silenceThresh {
-		return false
+	// Apply energy threshold
+	if energy < energyThresh {
+		return false, energy, silence
 	}
 
-	return true
+	// Apply silence threshold
+	if silence < silenceThresh {
+		return false, energy, silence
+	}
+
+	return true, energy, silence
 }
