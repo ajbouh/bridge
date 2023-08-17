@@ -25,10 +25,11 @@ type TranscriptionSegment struct {
 }
 
 type Transcription struct {
-	Language            string             `json:"language"`
-	LanguageProbability float32            `json:"language_probability"`
-	Duration            float32            `json:"duration"`
-	AllLanguageProbs    map[string]float32 `json:"all_language_probs"`
+	EndTimestamp        uint64              `json:"endTimestamp"`
+	Language            string              `json:"language"`
+	LanguageProbability float32             `json:"language_probability"`
+	Duration            float32             `json:"duration"`
+	AllLanguageProbs    *map[string]float32 `json:"all_language_probs"`
 
 	Segments []TranscriptionSegment `json:"segments"`
 }

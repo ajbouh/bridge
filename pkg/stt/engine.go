@@ -5,6 +5,7 @@ import (
 	"math"
 	"strings"
 	"sync"
+	"time"
 
 	logr "github.com/ajbouh/bridge/pkg/log"
 )
@@ -42,14 +43,17 @@ type EngineParams struct {
 }
 
 type Document struct {
-	TranscribedText      string
-	CurrentTranscription string
-	NewText              string
+	Transcriptions       []Transcription `json:"transcriptions"`
+	TranscribedText      string          `json:"transcribedText"`
+	CurrentTranscription string          `json:"currentTranscription"`
+	NewText              string          `json:"newText"`
+	StartedAt            int64           `json:"startedAt"`
 }
 
 func (e *Engine) ComposeSimple(script Transcription) (Document, uint32) {
 	doc := Document{
-		NewText: "",
+		NewText:   "",
+		StartedAt: e.startedAt,
 	}
 	end := uint32(0)
 
@@ -69,7 +73,11 @@ func (e *Engine) ComposeSimple(script Transcription) (Document, uint32) {
 		e.finishedText += " "
 	}
 	e.finishedText += doc.NewText
+	script.AllLanguageProbs = nil
+	e.transcriptions = append(e.transcriptions, script)
+
 	doc.TranscribedText = e.finishedText
+	doc.Transcriptions = append([]Transcription{}, e.transcriptions...)
 
 	return doc, end
 }
@@ -84,7 +92,9 @@ type Engine struct {
 	lastHandledTimestamp uint32
 
 	// document composer to handle incoming transcriptions
-	finishedText string
+	finishedText   string
+	transcriptions []Transcription
+	startedAt      int64
 
 	// callback when we have a document update
 	onDocumentUpdate func(Document)
@@ -106,6 +116,7 @@ func New(params EngineParams) (*Engine, error) {
 		onDocumentUpdate:     params.OnDocumentUpdate,
 		transcriber:          params.Transcriber,
 		isSpeaking:           false,
+		startedAt:            time.Now().Unix(),
 	}, nil
 }
 
@@ -113,8 +124,8 @@ func (e *Engine) OnDocumentUpdate(fn func(Document)) {
 	e.onDocumentUpdate = fn
 }
 
-func (e *Engine) Write(pcm []float32, timestamp uint32) {
-	e.writeVAD(pcm, timestamp)
+func (e *Engine) Write(pcm []float32, endTimestamp uint32) {
+	e.writeVAD(pcm, endTimestamp)
 }
 
 // XXX DANGER XXX
@@ -124,7 +135,7 @@ func (e *Engine) Write(pcm []float32, timestamp uint32) {
 //
 // writeVAD only buffers audio if somone is speaking. It will run inference after the audio transitions from
 // speaking to not speaking
-func (e *Engine) writeVAD(pcm []float32, timestamp uint32) {
+func (e *Engine) writeVAD(pcm []float32, endTimestamp uint32) {
 	// TODO normalize PCM and see if we can make it better
 	// endTimestamp is the latest packet timestamp + len of the audio in the packet
 	// FIXME make these timestamps make sense
@@ -176,6 +187,7 @@ func (e *Engine) writeVAD(pcm []float32, timestamp uint32) {
 					Logger.Error(err, "error running inference")
 					return
 				}
+				transcript.EndTimestamp = uint64(endTimestamp)
 				Logger.Debugf("GOT TRANSCRIPTION %+v", transcript)
 
 				doc, _ := e.ComposeSimple(transcript)

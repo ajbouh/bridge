@@ -137,8 +137,9 @@ func (a *AudioEngine) decode() {
 
 		if pkt.Timestamp < a.latestTimeStamp {
 			Logger.Debug("Out of order packet!", pkt.Timestamp, "<", a.latestTimeStamp)
+		} else {
+			a.latestTimeStamp = pkt.Timestamp
 		}
-		a.latestTimeStamp = pkt.Timestamp
 
 		if _, err := a.decodePacket(pkt); err != nil {
 			Logger.Error(err, "error decoding opus packet ")

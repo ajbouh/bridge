@@ -1,7 +1,43 @@
-import { generateRandomString, decodeDatachannelMessage } from "./util.js";
+import type { Writable, Readable } from 'svelte/store'
+import { writable, readonly } from 'svelte/store'
+
+function generateRandomString(length) {
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+
+function decodeDatachannelMessage(data) {
+  const decoder = new TextDecoder();
+  const arr = new Uint8Array(data);
+  const json = JSON.parse(decoder.decode(arr));
+  console.log("Got transcript:", json);
+  return json
+}
 
 export class Client {
-  constructor(stream, noPub, noSub, room, useDockerWs) {
+  micEnabled: Readable<boolean>
+  micEnabledWr: Writable<boolean>
+  transcription: Readable<string>
+  transcriptionWr: Writable<string>
+  noPub: boolean
+  noSub: boolean
+  room: string
+  stream: MediaStream
+  pub: RTCPeerConnection | undefined
+  pubAns: boolean | undefined
+  pubCandidates: RTCIceCandidate[]
+  sub: RTCPeerConnection | undefined
+  subCandidates: RTCIceCandidate[]
+  subOff: boolean | undefined
+  url: string
+  socket: WebSocket | undefined
+
+  constructor(stream: MediaStream, noPub: boolean, noSub: boolean, room: string, url: string) {
     const configuration = {
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     };
@@ -10,18 +46,20 @@ export class Client {
     this.noPub = noPub;
     this.noSub = noSub;
     this.room = room;
-    this.useDockerWs = useDockerWs;
+    this.url = url
 
-    this.muteBtn = document.getElementById("mic-mute");
+    const mic = this.stream.getAudioTracks()[0]
 
-    this.muteBtn.addEventListener("click", this.toggleMic);
+    this.micEnabledWr = writable(mic?.enabled)
+    this.micEnabled = readonly(this.micEnabledWr)
 
-    this.toggleMic();
+    this.transcriptionWr = writable('')
+    this.transcription = readonly(this.transcriptionWr)
 
+    this.pubCandidates = [];
     if (!noPub) {
       this.pub = new RTCPeerConnection(configuration);
       this.pubAns = false;
-      this.pubCandidates = [];
       this.pub.onicecandidate = (e) => {
         const { candidate } = e;
         if (candidate) {
@@ -35,15 +73,15 @@ export class Client {
       };
 
       this.pub.onconnectionstatechange = (e) => {
-        const { connectionState } = this.pub;
+        const { connectionState } = this.pub!;
         console.log("[pub] connstatechange", connectionState);
       };
     }
 
+    this.subCandidates = [];
     if (!noSub) {
       this.sub = new RTCPeerConnection(configuration);
       this.subOff = false;
-      this.subCandidates = [];
       this.sub.onicecandidate = (e) => {
         const { candidate } = e;
         if (candidate) {
@@ -53,7 +91,7 @@ export class Client {
       };
 
       this.sub.onconnectionstatechange = (e) => {
-        const { connectionState } = this.sub;
+        const { connectionState } = this.sub!;
         console.log("[sub] connstatechange", connectionState);
       };
 
@@ -70,7 +108,8 @@ export class Client {
         console.log("got chan", channel);
         if (channel.label === "transcriptions") {
           channel.onmessage = (msg) => {
-            decodeDatachannelMessage(msg.data);
+            console.log("got chan message", msg)
+            this.transcriptionWr.set(decodeDatachannelMessage(msg.data));
           };
         }
       };
@@ -80,21 +119,29 @@ export class Client {
   toggleMic = () => {
     const audioTrack = this.stream.getAudioTracks()[0];
     audioTrack.enabled = !audioTrack.enabled;
-
-    if (audioTrack.enabled) {
-      this.muteBtn.innerText = "Mute";
-    } else {
-      this.muteBtn.innerText = "Unmute";
-    }
+    this.micEnabledWr.set(audioTrack.enabled)
   };
+
+  setMicTrack(track: MediaStreamTrack) {
+    const existingTracks = this.stream.getAudioTracks()
+    if (existingTracks.length === 1 && existingTracks[0] === track) {
+      // short circuit if this should be a noop.
+      return
+    }
+
+    for (const existingTrack of existingTracks) {
+      this.stream.removeTrack(existingTrack)
+    }
+    this.stream.addTrack(track)
+
+    for (const sender of this.pub!.getSenders()) {
+      sender.replaceTrack(track)
+    }
+  }
 
   async socketConnect() {
     return new Promise((resolve) => {
-      let url = "ws://localhost:8088/ws";
-      if (this.useDockerWs) {
-        url = "ws://host.docker.internal:8088/ws";
-      }
-      this.socket = new WebSocket(url);
+      this.socket = new WebSocket(this.url);
 
       // Event listener for when the WebSocket connection is opened
       this.socket.addEventListener("open", (event) => {
@@ -109,6 +156,7 @@ export class Client {
         const { result } = data;
         if (result) {
           if (result.type === "answer") {
+            if (!this.pub) { throw new Error("pub is null")}
             console.log("setting ans");
             await this.pub.setRemoteDescription(data.result);
             this.pubAns = true;
@@ -121,10 +169,12 @@ export class Client {
           if (method) {
             if (method === "trickle") {
               if (params.target === 0) {
+                if (!this.pub) { throw new Error("pub is null") }
                 console.log("adding candidate for pub");
                 await this.pub.addIceCandidate(params.candidate);
               }
               if (params.target === 1) {
+                if (!this.sub) { throw new Error("sub is null") }
                 console.log("adding candidate for sub");
                 if (!this.subOff) {
                   this.subCandidates.push(params.candidate);
@@ -133,6 +183,7 @@ export class Client {
                 }
               }
             } else if (method === "offer") {
+              if (!this.sub) { throw new Error("sub is null") }
               console.log("setting offer");
               await this.sub.setRemoteDescription(params);
               const answer = await this.sub.createAnswer();
@@ -205,6 +256,7 @@ export class Client {
 
     this.socket.send(JSON.stringify(msg));
   }
+
   answer(answer) {
     console.log("answer", JSON.stringify(answer));
     this.socket.send(

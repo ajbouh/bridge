@@ -1,5 +1,7 @@
 FROM alpine:latest as node
+
 ENV NODE_VERSION 18.13.0
+
 RUN addgroup -g 1000 node \
   && adduser -u 1000 -G node -s /bin/sh -D node \
   && apk add --no-cache \
@@ -67,45 +69,33 @@ RUN addgroup -g 1000 node \
   && node --version \
   && npm --version
 
+FROM node as deps
 
-FROM node as uideps
 WORKDIR /app
-# COPY services/ui/patches ./patches
-COPY services/ui/package.json services/ui/package-lock.json ./
+COPY lenses/ui/patches ./patches
+COPY lenses/ui/package.json lenses/ui/package-lock.json ./
 RUN npm i
 
-
-FROM uideps as uibuild
-COPY services/ui/src ./src
-COPY services/ui/static ./static
-COPY services/ui/*.sh services/ui/*.js services/ui/*.json services/ui/*.cjs services/ui/.npmrc services/ui/.env ./
+FROM deps as build
+COPY lenses/ui/src ./src
+COPY lenses/ui/static ./static
+COPY lenses/ui/*.sh lenses/ui/*.js lenses/ui/*.json lenses/ui/*.cjs lenses/ui/.npmrc lenses/ui/.env ./
 RUN npm run build
 
-
-FROM golang:1.20 as builder
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-    pkg-config \
-    libopus-dev \
-    libopusfile-dev \
-  && rm -rf /var/lib/apt/lists/*
-WORKDIR /app 
-COPY ./pkg pkg
-COPY ./services/rtc services/rtc
-COPY go.mod go.sum .
-RUN go build -o main ./services/rtc
-
-
-FROM golang:1.20
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-    pkg-config \
-    libopus-dev \
-    libopusfile-dev \
-  && rm -rf /var/lib/apt/lists/*
+FROM node as dev
 WORKDIR /app
-COPY --from=builder /app/main ./main
-COPY ./services/rtc/config.toml ./config.toml
-COPY --from=uibuild /app/build ./ui/.
-EXPOSE 8088
-CMD ["/app/main"]
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+COPY --from=deps /app/ ./
+COPY lenses/ui/*.sh lenses/ui/*.js lenses/ui/*.json lenses/ui/*.cjs lenses/ui/.npmrc lenses/ui/.env ./
+
+ENTRYPOINT ["npm", "run", "dev", "--", "--host=0.0.0.0"]
+
+FROM node as dist
+WORKDIR /app
+RUN apk update && apk add --no-cache ca-certificates && rm -rf /var/cache/apk/*
+COPY --from=build /app/package.json ./
+RUN npm i --omit=dev
+COPY --from=build /app/build ./
+COPY lenses/ui/run.sh ./
+
+ENTRYPOINT ["/app/run.sh"]
