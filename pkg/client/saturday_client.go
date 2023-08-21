@@ -22,7 +22,7 @@ type SaturdayConfig struct {
 
 	// channel used to send transcription segments over the data channel
 	// any transcription segment sent on this channel with be sent over the data channel
-	TranscriptionStream chan stt.Document
+	TranscriptionStream chan stt.Transcription
 }
 
 type SaturdayClient struct {

@@ -47,12 +47,13 @@ func main() {
 		}
 	}
 
-	transcriptionStream := make(chan stt.Document, 100)
+	transcriptionStream := make(chan stt.Transcription, 100)
 
 	sttEngine, err := stt.New(stt.EngineParams{
 		Transcriber: transcriber,
 		OnDocumentUpdate: func(document stt.Document) {
-			transcriptionStream <- document
+			// Only send the last transcript.
+			transcriptionStream <- document.Transcriptions[len(document.Transcriptions)-1]
 		},
 	})
 	if err != nil {

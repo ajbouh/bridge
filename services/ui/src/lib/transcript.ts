@@ -66,7 +66,7 @@ export interface RenderedTranscriptEntry {
   }[]
 }
 
-export function renderableTranscriptSession(doc: TranscriptDocument): RenderedTranscriptSession {
+export function renderableTranscriptSession(transcriptions: Transcript[]): RenderedTranscriptSession {
   const speakerLabel = 'Unknown'
   const isAssistant = false
   const session: RenderedTranscriptSession = {
@@ -79,16 +79,17 @@ export function renderableTranscriptSession(doc: TranscriptDocument): RenderedTr
     entries: [],
   }
 
-  if (!doc) {
+  if (!transcriptions) {
     return session
   }
 
-  const startedAtMs = doc.startedAt * 1000
+  // const startedAtMs = doc.startedAt * 1000
+  const startedAtMs = +new Date()
   session.date = new Date(startedAtMs)
 
   let lastSegmentSessionEndTimeS
   let lastEntry: RenderedTranscriptEntry | undefined
-  for (const transcript of doc.transcriptions) {
+  for (const transcript of transcriptions) {
     const transcriptEndTimestampS = transcript.endTimestamp / 1000
     const transcriptStartTimestampMs = transcript.endTimestamp - (transcript.duration * 1000)
     const transcriptStartTimestampS = transcriptEndTimestampS - transcript.duration

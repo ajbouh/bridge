@@ -24,7 +24,7 @@ type RTCConnection struct {
 type RTCConnectionParams struct {
 	trickleFn           func(*webrtc.ICECandidate, int) error
 	rtpChan             chan<- *rtp.Packet
-	transcriptionStream <-chan stt.Document
+	transcriptionStream <-chan stt.Transcription
 	mediaIn             <-chan media.Sample
 }
 
@@ -101,8 +101,6 @@ func NewRTCConnection(params RTCConnectionParams) (*RTCConnection, error) {
 			Logger.Info("data channel opened...")
 
 			for transcription := range params.transcriptionStream {
-				Logger.Debugf("Transcribed %s", transcription.TranscribedText)
-				Logger.Debugf("New text %s", transcription.NewText)
 				data, err := json.Marshal(transcription)
 				if err != nil {
 					Logger.Error(err, "error marshalling transcript")

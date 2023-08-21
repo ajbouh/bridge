@@ -53,7 +53,7 @@ export class Client {
     this.micEnabledWr = writable(mic?.enabled)
     this.micEnabled = readonly(this.micEnabledWr)
 
-    this.transcriptionWr = writable('')
+    this.transcriptionWr = writable([])
     this.transcription = readonly(this.transcriptionWr)
 
     this.pubCandidates = [];
@@ -109,7 +109,7 @@ export class Client {
         if (channel.label === "transcriptions") {
           channel.onmessage = (msg) => {
             console.log("got chan message", msg)
-            this.transcriptionWr.set(decodeDatachannelMessage(msg.data));
+            this.transcriptionWr.update(arr => (arr.push(decodeDatachannelMessage(msg.data)), arr));
           };
         }
       };
