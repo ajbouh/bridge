@@ -5,7 +5,8 @@
       <svg>
         <line
           vector-effect="non-scaling-stroke"
-          stroke="rgba(138,43,226, 0.3)"
+          style="opacity: 0.3;"
+          stroke="{lineColor}"
           stroke-width="300"
           stroke-dasharray="10 5"
           x1="0"
@@ -25,7 +26,7 @@
     <div class="time">{formatTime(time)}</div>
     <div class="session-time">{formatSessionTime(sessionTime)}</div>
   </div>
-  <div class="line" style="background-color: rgba(138,43,226, 1);" />
+  <div class="line" style="background-color: {lineColor}" />
   <div class="right" class:assistant={isAssistant}>
     <div class="name">{speakerLabel}</div>
     <div class="text">
@@ -39,6 +40,10 @@
   const timeFmt = new Intl.DateTimeFormat("en-us", {timeStyle: "medium"})
 </script>
 <script>
+import { getContext } from 'svelte'
+
+let lineColor = getContext('lineColor') || 'green';
+
 export let time = new Date()
 export let sessionTime = 2
 export let speakerLabel = 'Eva'

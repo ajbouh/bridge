@@ -2,7 +2,7 @@
   <div class="entry summary">
     <div class="left" />
 
-    <div class="line" style="background-color: red;" />
+    <div class="line" style="background-color: {lineColor};" />
 
     <div class="right">
       <div class="date">
@@ -24,6 +24,7 @@
   {/each}
 </div>
 <script>
+  import { setContext } from 'svelte'
   import TranscriptEntry from '$lib/TranscriptEntry.svelte'
   export let participants = []
   export let related = 'Related sessions, documents, etc.'
@@ -43,6 +44,8 @@
     // {time: '7:01pm', sessionTime: '+0:00:00', speakerLabel: 'Charles', text: `My name is Charles. I'm working on Storyboarder, which is a tool to
     //       help people to tell stories. I'm really excited about it.`},
   ]
+  export let lineColor = 'red'
+  setContext('lineColor', lineColor)
 </script>
 <style>
   .session {
