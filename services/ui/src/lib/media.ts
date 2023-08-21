@@ -5,7 +5,9 @@ export async function getMedia(mediaDevices: MediaDevices) {
 
   try {
     const audioStream = await mediaDevices.getUserMedia({
-      audio: { noiseSuppression: true },
+      audio: {
+        // noiseSuppression: true
+      },
     });
     audio = audioStream.getAudioTracks()[0];
     audio.enabled = false
@@ -22,7 +24,7 @@ export async function getMic(mediaDevices: MediaDevices, deviceId: string) {
     video: false,
     audio: {
       deviceId: deviceId ? { exact: deviceId } : undefined,
-      noiseSuppression: true,
+      // noiseSuppression: true,
     },
   });
 }
