@@ -78,7 +78,7 @@ RUN npm i
 FROM uideps as uibuild
 COPY services/ui/src ./src
 COPY services/ui/static ./static
-COPY services/ui/*.sh services/ui/*.js services/ui/*.json services/ui/*.cjs services/ui/.npmrc services/ui/.env ./
+COPY services/ui/*.sh services/ui/*.js services/ui/*.json services/ui/*.cjs services/ui/.npmrc ./
 RUN npm run build
 
 
