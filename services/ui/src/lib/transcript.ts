@@ -86,39 +86,40 @@ export function renderableTranscriptSession(doc: TranscriptDocument): RenderedTr
   const startedAtMs = doc.startedAt * 1000
   session.date = new Date(startedAtMs)
 
-  let lastSegmentSessionEndTime
+  let lastSegmentSessionEndTimeS
   let lastEntry: RenderedTranscriptEntry | undefined
   for (const transcript of doc.transcriptions) {
-    const transcriptEndTimestamp = transcript.endTimestamp / 1000
-    const transcriptStartTimestamp = transcript.endTimestamp - transcript.duration
+    const transcriptEndTimestampS = transcript.endTimestamp / 1000
+    const transcriptStartTimestampMs = transcript.endTimestamp - (transcript.duration * 1000)
+    const transcriptStartTimestampS = transcriptEndTimestampS - transcript.duration
     for (const segment of transcript.segments) {
-      const sessionTimeMs = segment.start + transcriptStartTimestamp
-      const sessionTime = Math.floor(sessionTimeMs / 1000)
-      const precedingSilence = lastSegmentSessionEndTime == null ? sessionTime : sessionTime - lastSegmentSessionEndTime
+      const sessionTimeMs = (segment.start * 1000) + transcriptStartTimestampMs
+      const sessionTimeS = Math.floor(sessionTimeMs / 1000)
+      const precedingSilence = lastSegmentSessionEndTimeS == null ? sessionTimeS : sessionTimeS - lastSegmentSessionEndTimeS
 
       if (lastEntry &&
           lastEntry.speakerLabel === speakerLabel &&
           lastEntry.isAssistant === isAssistant &&
-          precedingSilence < 2) {
+          precedingSilence < 1) {
         lastEntry.text += segment.text || ''
         lastEntry.words = lastEntry.words.concat(segment.words)
-        lastEntry.debug.push({ precedingSilence, transcript, sessionTimeMs, sessionTime, transcriptEndTimestamp, transcriptStartTimestamp, segment })
+        lastEntry.debug.push({ precedingSilence, transcript, sessionTimeMs, sessionTime: sessionTimeS, transcriptEndTimestamp: transcriptEndTimestampS, transcriptStartTimestamp: transcriptStartTimestampS, segment })
       } else {
         lastEntry = {
           speakerLabel,
           isAssistant,
           precedingSilence,
-          sessionTime,
+          sessionTime: sessionTimeS,
           time: new Date(startedAtMs + sessionTimeMs),
           text: segment.text || '',
           words: segment.words,
-          debug: [{ precedingSilence, transcript, sessionTimeMs, sessionTime, transcriptEndTimestamp, transcriptStartTimestamp, segment}]
+          debug: [{ precedingSilence, transcript, sessionTimeMs, sessionTime: sessionTimeS, transcriptEndTimestamp: transcriptEndTimestampS, transcriptStartTimestamp: transcriptStartTimestampS, segment}]
         }
         session.entries.push(lastEntry)
       }
-      lastSegmentSessionEndTime = transcriptStartTimestamp + segment.end 
+      lastSegmentSessionEndTimeS = transcriptStartTimestampS + segment.end 
     }
-    lastSegmentSessionEndTime = transcriptEndTimestamp
+    lastSegmentSessionEndTimeS = transcriptEndTimestampS
   }
 
   return session
