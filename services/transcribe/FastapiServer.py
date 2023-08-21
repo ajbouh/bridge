@@ -11,7 +11,7 @@ class Word(BaseModel):
     start: float
     end: float
     word: str
-    probability: float
+    prob: float
 
 class TranscriptionSegment(BaseModel):
     # startTimestamp: int
@@ -32,7 +32,7 @@ class TranscriptionSegment(BaseModel):
 
 class Transcription(BaseModel):
     language: str
-    language_probability: float
+    language_prob: float
     duration: float
     all_language_probs: Optional[Dict[str, float]]
 
@@ -62,7 +62,7 @@ def perform_transcription(transcription_request):
 
     return Transcription(
         language=info.language,
-        language_probability=info.language_probability,
+        language_prob=info.language_probability,
         duration=info.duration,
         all_language_probs={
             language: prob
@@ -84,7 +84,7 @@ def perform_transcription(transcription_request):
                         start=word.start,
                         end=word.end,
                         word=word.word,
-                        probability=word.probability,
+                        prob=word.probability,
                     )
                     for word in segment.words
                 ] if segment.words else None,

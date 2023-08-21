@@ -8,7 +8,7 @@ type Word struct {
 	Start       float32 `json:"start"`
 	End         float32 `json:"end"`
 	Word        string  `json:"word"`
-	Probability float32 `json:"probability"`
+	Probability float32 `json:"prob"`
 }
 
 type TranscriptionSegment struct {
@@ -27,9 +27,9 @@ type TranscriptionSegment struct {
 type Transcription struct {
 	EndTimestamp        uint64              `json:"endTimestamp"`
 	Language            string              `json:"language"`
-	LanguageProbability float32             `json:"language_probability"`
+	LanguageProbability float32             `json:"language_prob"`
 	Duration            float32             `json:"duration"`
-	AllLanguageProbs    *map[string]float32 `json:"all_language_probs"`
+	AllLanguageProbs    *map[string]float32 `json:"all_language_probs,omitempty"`
 
 	Segments []TranscriptionSegment `json:"segments"`
 }

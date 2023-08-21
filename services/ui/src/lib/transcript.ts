@@ -2,7 +2,7 @@ export interface TranscriptWord {
   start: number
   end: number
   word: string
-  probability: number
+  prob: number
 }
 
 export interface TranscriptSegment {
@@ -21,7 +21,7 @@ export interface TranscriptSegment {
 
 export interface Transcript {
   language: string
-  language_probability: number
+  language_prob: number
   endTimestamp: number
   duration: number
   segments: TranscriptSegment[]
