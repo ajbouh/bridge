@@ -8,10 +8,11 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+COPY go.mod go.sum .
+RUN go mod download
 
 COPY ./pkg pkg
 COPY ./services/client services/client
-COPY go.mod go.sum .
 
 RUN go build -o main ./services/client
 
