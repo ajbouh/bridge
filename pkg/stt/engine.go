@@ -124,10 +124,6 @@ func (e *Engine) OnDocumentUpdate(fn func(Document)) {
 	e.onDocumentUpdate = fn
 }
 
-func (e *Engine) Write(pcm []float32, endTimestamp uint32) {
-	e.writeVAD(pcm, endTimestamp)
-}
-
 // XXX DANGER XXX
 // This is highly experiemential and will probably crash in very interesting ways. I have deadlines
 // and am hacking towards what I want to demo. Use at your own risk :D
@@ -135,7 +131,7 @@ func (e *Engine) Write(pcm []float32, endTimestamp uint32) {
 //
 // writeVAD only buffers audio if somone is speaking. It will run inference after the audio transitions from
 // speaking to not speaking
-func (e *Engine) writeVAD(pcm []float32, endTimestamp uint32) {
+func (e *Engine) Write(pcm []float32, endTimestamp uint32) {
 	// TODO normalize PCM and see if we can make it better
 	// endTimestamp is the latest packet timestamp + len of the audio in the packet
 	// FIXME make these timestamps make sense
@@ -199,7 +195,7 @@ func (e *Engine) writeVAD(pcm []float32, endTimestamp uint32) {
 				e.window = e.window[:0]
 			}
 			// not speaking do nothing
-			Logger.Debugf("NOT SPEAKING energy=%#v (energyThreshold=%#v) silence=%#v (silenceThreshold=%#v) ", energy, energyThresh, silence, silenceThresh)
+			Logger.Debugf("NOT SPEAKING energy=%#v (energyThreshold=%#v) silence=%#v (silenceThreshold=%#v) endTimestamp=%d ", energy, energyThresh, silence, silenceThresh, endTimestamp)
 			return
 		}
 	}

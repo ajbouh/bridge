@@ -45,7 +45,7 @@ func NewRTCConnection(params RTCConnectionParams) (*RTCConnection, error) {
 		} else if t.Kind() == webrtc.RTPCodecTypeAudio {
 			kind = "audio"
 			go func() {
-				Logger.Info("starting audio read loop")
+				Logger.Infof("starting audio read loop: codec=%#v", t.Codec())
 				for {
 					pkt, _, err := t.ReadRTP()
 					if err != nil {

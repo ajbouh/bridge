@@ -13,12 +13,15 @@ import (
 )
 
 const (
-	sampleRate  = stt.SampleRate // (16000)
-	channels    = 1              // decode into 1 channel since that is what whisper.cpp wants
-	frameSizeMs = 20
+	sampleRate          = stt.SampleRate // (16000)
+	incomingChannels    = 1              // decode into 1 channel since that is what whisper.cpp wants
+	outgoingChannels    = 2              // we use 2 outgoingChannels for the output
+	outgoingFrameSizeMs = 20
+	incomingFrameSizeMs = 60
 )
 
-var frameSize = channels * frameSizeMs * sampleRate / 1000
+var outgoingFrameSize = outgoingChannels * outgoingFrameSizeMs * sampleRate / 1000
+var incomingFrameSize = incomingChannels * incomingFrameSizeMs * sampleRate / 1000
 
 // AudioEngine is used to convert RTP Opus packets to raw PCM audio to be sent to Whisper
 // and to convert raw PCM audio from Coqui back to RTP Opus packets to be sent back over WebRTC
@@ -30,10 +33,10 @@ type AudioEngine struct {
 
 	dec *internal.OpusDecoder
 	enc *internal.OpusEncoder
+
 	// slice to hold raw pcm data during decoding
-	pcm []float32
-	// slice to hold binary encoded pcm data
-	buf []byte
+	incomingPCM []float32
+
 
 	firstTimeStamp  uint32
 	latestTimeStamp uint32
@@ -44,13 +47,12 @@ type AudioEngine struct {
 }
 
 func NewAudioEngine(sttEngine *stt.Engine) (*AudioEngine, error) {
-	dec, err := internal.NewOpusDecoder(sampleRate, channels)
+	dec, err := internal.NewOpusDecoder(sampleRate, incomingChannels)
 	if err != nil {
 		return nil, err
 	}
 
-	// we use 2 channels for the output
-	enc, err := internal.NewOpusEncoder(2, frameSizeMs)
+	enc, err := internal.NewOpusEncoder(outgoingChannels, outgoingFrameSizeMs)
 	if err != nil {
 		return nil, err
 	}
@@ -59,10 +61,9 @@ func NewAudioEngine(sttEngine *stt.Engine) (*AudioEngine, error) {
 	shouldInfer.Store(true)
 
 	ae := &AudioEngine{
-		rtpIn:          make(chan *rtp.Packet),
-		mediaOut:       make(chan media.Sample),
-		pcm:            make([]float32, frameSize),
-		buf:            make([]byte, frameSize*2),
+		rtpIn:       make(chan *rtp.Packet),
+		mediaOut:    make(chan media.Sample),
+		incomingPCM: make([]float32, incomingFrameSize),
 		dec:            dec,
 		enc:            enc,
 		sttEngine:      sttEngine,
@@ -104,7 +105,7 @@ func (a *AudioEngine) sendMedia(frames []internal.OpusFrame) {
 		sample := convertOpusToSample(f)
 		a.mediaOut <- sample
 		// this is important to properly pace the samples
-		time.Sleep(time.Millisecond * 20)
+		time.Sleep(time.Millisecond * outgoingFrameSizeMs)
 	}
 
 	// start inferring audio again
@@ -115,7 +116,7 @@ func convertOpusToSample(frame internal.OpusFrame) media.Sample {
 	return media.Sample{
 		Data:               frame.Data,
 		PrevDroppedPackets: 0, // FIXME support dropping packets
-		Duration:           time.Millisecond * 20,
+		Duration:           time.Millisecond * outgoingFrameSizeMs,
 	}
 }
 
@@ -148,17 +149,18 @@ func (a *AudioEngine) decode() {
 }
 
 func (a *AudioEngine) decodePacket(pkt *rtp.Packet) (int, error) {
-	_, err := a.dec.Decode(pkt.Payload, a.pcm)
+	incomingSamplesPerChannel, err := a.dec.Decode(pkt.Payload, a.incomingPCM)
 	// we decode to float32 here since that is what whisper.cpp takes
 	if err != nil {
 		Logger.Error(err, "error decoding fb packet")
 		return 0, err
 	} else {
 		timestampMS := (pkt.Timestamp - a.firstTimeStamp) / ((sampleRate / 1000) * 3)
-		lengthOfRecording := uint32(len(a.pcm) / (sampleRate / 1000))
-		timestampRecordingEnds := timestampMS + lengthOfRecording
-		a.sttEngine.Write(a.pcm, timestampRecordingEnds)
-		return convertToBytes(a.pcm, a.buf), nil
+		lengthOfRecordingMs := uint32(incomingSamplesPerChannel / (sampleRate / 1000))
+		timestampRecordingEnds := timestampMS + lengthOfRecordingMs
+		incomingPCM := a.incomingPCM[:incomingSamplesPerChannel*incomingChannels]
+		a.sttEngine.Write(incomingPCM, timestampRecordingEnds)
+		return incomingSamplesPerChannel, nil
 	}
 }
 
