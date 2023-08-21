@@ -28,7 +28,11 @@
   <div class="line" style="background-color: rgba(138,43,226, 1);" />
   <div class="right" class:assistant={isAssistant}>
     <div class="name">{speakerLabel}</div>
-    <div class="text">{text}</div>
+    <div class="text">
+      {#each words as word}
+        <span on:click={() => console.log({word})}>{word.word}</span>
+      {/each}
+    </div>
   </div>
 </div>
 <script context="module">
@@ -40,6 +44,7 @@ export let sessionTime = 2
 export let speakerLabel = 'Eva'
 export let isAssistant = true
 export let text = `That's very meta. What problem does it solve?`
+export let words = []
 export let precedingSilence = 0
 
 $: precedingSilenceClass = precedingSilence <= 0.5

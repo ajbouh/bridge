@@ -45,6 +45,8 @@ export interface RenderedTranscriptSession {
   entries: RenderedTranscriptEntry[]
 }
 
+export type RenderedTranscriptWord = TranscriptWord
+
 export interface RenderedTranscriptEntry {
   time: Date
   isAssistant: boolean
@@ -52,6 +54,7 @@ export interface RenderedTranscriptEntry {
   sessionTime: number
   speakerLabel: string
   text: string
+  words: RenderedTranscriptWord[]
   debug: {
     precedingSilence: number
     sessionTimeMs: number
@@ -98,6 +101,7 @@ export function renderableTranscriptSession(doc: TranscriptDocument): RenderedTr
           lastEntry.isAssistant === isAssistant &&
           precedingSilence < 2) {
         lastEntry.text += segment.text || ''
+        lastEntry.words = lastEntry.words.concat(segment.words)
         lastEntry.debug.push({ precedingSilence, transcript, sessionTimeMs, sessionTime, transcriptEndTimestamp, transcriptStartTimestamp, segment })
       } else {
         lastEntry = {
@@ -107,6 +111,7 @@ export function renderableTranscriptSession(doc: TranscriptDocument): RenderedTr
           sessionTime,
           time: new Date(startedAtMs + sessionTimeMs),
           text: segment.text || '',
+          words: segment.words,
           debug: [{ precedingSilence, transcript, sessionTimeMs, sessionTime, transcriptEndTimestamp, transcriptStartTimestamp, segment}]
         }
         session.entries.push(lastEntry)
