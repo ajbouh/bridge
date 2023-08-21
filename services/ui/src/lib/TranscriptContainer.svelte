@@ -37,11 +37,6 @@
     min-height: 100vh;
   }
 
-  h1 {
-    font-size: 3.2em;
-    line-height: 1.1;
-  }
-
   .container {
     display: flex;
     flex-direction: column;
@@ -49,9 +44,5 @@
     justify-content: center;
     margin: auto;
     max-width: 800px;
-  }
-
-  .session {
-    width: 100%;
   }
 </style>
