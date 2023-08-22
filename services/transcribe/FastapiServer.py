@@ -44,7 +44,19 @@ def transcribe(transcription_request: List[float]) -> Transcription:
     # Perform transcription on the audio data
 
     start = time.time()
-    transcription = perform_transcription(transcription_request)
+    transcription = perform_transcription(transcription_request, task="transcribe")
+    end = time.time()
+
+    print("Took:", end - start)
+    print(transcription)
+    return transcription
+
+@app.post('/translate')
+def translate(transcription_request: List[float]) -> Transcription:
+    # Perform transcription on the audio data
+
+    start = time.time()
+    transcription = perform_transcription(transcription_request, task="translate")
     end = time.time()
 
     print("Took:", end - start)
@@ -52,12 +64,13 @@ def transcribe(transcription_request: List[float]) -> Transcription:
     return transcription
 
 
-def perform_transcription(transcription_request):
+def perform_transcription(transcription_request, task):
     segments, info = model.transcribe(
         np.array(transcription_request, dtype=np.float32),
         vad_filter=True,
         beam_size=5,
         word_timestamps=True,
+        task=task,
     )
 
     return Transcription(

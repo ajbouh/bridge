@@ -20,6 +20,7 @@ services:
       URL: web_server:8088
       ROOM: test
       TRANSCRIPTION_SERVICE: http://transcription_service:8000/transcribe
+      TRANSLATOR_SERVICE: http://transcription_service:8000/translate
 
   transcription_service:
     restart: "on-failure"

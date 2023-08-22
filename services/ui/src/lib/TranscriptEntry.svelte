@@ -47,6 +47,7 @@ let lineColor = getContext('lineColor') || 'green';
 export let time = new Date()
 export let sessionTime = 2
 export let speakerLabel = 'Eva'
+export let language = 'en'
 export let isAssistant = true
 export let text = `That's very meta. What problem does it solve?`
 export let words = []

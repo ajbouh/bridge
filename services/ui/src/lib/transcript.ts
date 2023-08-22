@@ -15,6 +15,9 @@ export interface TranscriptSegment {
   compression_ratio: number
   no_speech_prob: number
 
+  speaker: string
+  is_assistant?: boolean
+
   text?: string
   words: TranscriptWord[]
 }
@@ -50,6 +53,7 @@ export type RenderedTranscriptWord = TranscriptWord
 export interface RenderedTranscriptEntry {
   time: Date
   isAssistant: boolean
+  language: string
   precedingSilence: number
   sessionTime: number
   speakerLabel: string
@@ -67,10 +71,11 @@ export interface RenderedTranscriptEntry {
 }
 
 export function renderableTranscriptSession(transcriptions: Transcript[]): RenderedTranscriptSession {
-  const speakerLabel = 'Unknown'
-  const isAssistant = false
+  const participants = new Set<string>()
   const session: RenderedTranscriptSession = {
-    participants: [speakerLabel],
+    get participants() {
+      return Array.from(participants)
+    },
     related: '',
     statistics: '',
     summary: '',
@@ -99,16 +104,19 @@ export function renderableTranscriptSession(transcriptions: Transcript[]): Rende
       const precedingSilence = lastSegmentSessionEndTimeS == null ? sessionTimeS : sessionTimeS - lastSegmentSessionEndTimeS
 
       if (lastEntry &&
-          lastEntry.speakerLabel === speakerLabel &&
-          lastEntry.isAssistant === isAssistant &&
+          lastEntry.speakerLabel === segment.speaker &&
+          lastEntry.isAssistant === segment.is_assistant &&
+          lastEntry.language === transcript.language &&
           precedingSilence < 1) {
         lastEntry.text += segment.text || ''
         lastEntry.words = lastEntry.words.concat(segment.words)
         lastEntry.debug.push({ precedingSilence, transcript, sessionTimeMs, sessionTime: sessionTimeS, transcriptEndTimestamp: transcriptEndTimestampS, transcriptStartTimestamp: transcriptStartTimestampS, segment })
       } else {
+        participants.add(segment.speaker)
         lastEntry = {
-          speakerLabel,
-          isAssistant,
+          speakerLabel: segment.speaker,
+          isAssistant: segment.is_assistant || false,
+          language: transcript.language,
           precedingSilence,
           sessionTime: sessionTimeS,
           time: new Date(startedAtMs + sessionTimeMs),

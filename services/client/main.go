@@ -37,11 +37,20 @@ func main() {
 	url := url.URL{Scheme: "ws", Host: urlEnv, Path: "/ws"}
 
 	var transcriber stt.Transcriber
+	var translator stt.Translator
 	var err error
 
 	transcriptionService := os.Getenv("TRANSCRIPTION_SERVICE")
 	if transcriptionService != "" {
-		transcriber, err = stt.NewHTTPBackend(transcriptionService)
+		transcriber, err = stt.NewHTTPTranscriber(transcriptionService)
+		if err != nil {
+			logger.Fatal(err, "error creating http api")
+		}
+	}
+
+	translatorService := os.Getenv("TRANSLATOR_SERVICE")
+	if translatorService != "" {
+		translator, err = stt.NewHTTPTranslator(translatorService)
 		if err != nil {
 			logger.Fatal(err, "error creating http api")
 		}
@@ -51,6 +60,7 @@ func main() {
 
 	sttEngine, err := stt.New(stt.EngineParams{
 		Transcriber: transcriber,
+		Translator:  translator,
 		OnDocumentUpdate: func(document stt.Document) {
 			// Only send the last transcript.
 			transcriptionStream <- document.Transcriptions[len(document.Transcriptions)-1]

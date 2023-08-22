@@ -40,6 +40,7 @@ var Logger = logr.New()
 type EngineParams struct {
 	OnDocumentUpdate func(Document)
 	Transcriber      Transcriber
+	Translator       Translator
 }
 
 type Document struct {
@@ -73,7 +74,6 @@ func (e *Engine) ComposeSimple(script Transcription) (Document, uint32) {
 		e.finishedText += " "
 	}
 	e.finishedText += doc.NewText
-	script.AllLanguageProbs = nil
 	e.transcriptions = append(e.transcriptions, script)
 
 	doc.TranscribedText = e.finishedText
@@ -100,6 +100,7 @@ type Engine struct {
 	onDocumentUpdate func(Document)
 
 	transcriber Transcriber
+	translator  Translator
 
 	isSpeaking bool
 }
@@ -115,6 +116,7 @@ func New(params EngineParams) (*Engine, error) {
 		lastHandledTimestamp: 0,
 		onDocumentUpdate:     params.OnDocumentUpdate,
 		transcriber:          params.Transcriber,
+		translator:           params.Translator,
 		isSpeaking:           false,
 		startedAt:            time.Now().Unix(),
 	}, nil
@@ -186,13 +188,39 @@ func (e *Engine) Write(pcm []float32, endTimestamp uint32) {
 				transcript.EndTimestamp = uint64(endTimestamp)
 				Logger.Debugf("GOT TRANSCRIPTION %+v", transcript)
 
-				doc, _ := e.ComposeSimple(transcript)
+				transcript.AllLanguageProbs = nil
+				for i := range transcript.Segments {
+					transcript.Segments[i].Speaker = "Unknown"
+					transcript.Segments[i].IsAssistant = false
+				}
 
+				doc, _ := e.ComposeSimple(transcript)
 				if e.onDocumentUpdate != nil {
 					e.onDocumentUpdate(doc)
 				}
 
-				e.window = e.window[:0]
+				defer func() { e.window = e.window[:0] }()
+
+				if transcript.Language != "en" && e.translator != nil {
+					Logger.Debugf("Foreign language detected language=%s translating to English..", transcript.Language)
+
+					translatedTranscript, err := e.translator.Translate(e.window, "en")
+					if err != nil {
+						Logger.Error(err, "error running inference")
+						return
+					}
+
+					translatedTranscript.AllLanguageProbs = nil
+					for i := range translatedTranscript.Segments {
+						translatedTranscript.Segments[i].Speaker = "Translator"
+						translatedTranscript.Segments[i].IsAssistant = true
+					}
+
+					doc, _ := e.ComposeSimple(translatedTranscript)
+					if e.onDocumentUpdate != nil {
+						e.onDocumentUpdate(doc)
+					}
+				}
 			}
 			// not speaking do nothing
 			Logger.Debugf("NOT SPEAKING energy=%#v (energyThreshold=%#v) silence=%#v (silenceThreshold=%#v) endTimestamp=%d ", energy, energyThresh, silence, silenceThresh, endTimestamp)

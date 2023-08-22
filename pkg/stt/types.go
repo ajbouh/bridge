@@ -4,6 +4,10 @@ type Transcriber interface {
 	Transcribe(audioData []float32) (Transcription, error)
 }
 
+type Translator interface {
+	Translate(audioData []float32, language string) (Transcription, error)
+}
+
 type Word struct {
 	Start       float32 `json:"start"`
 	End         float32 `json:"end"`
@@ -22,6 +26,9 @@ type TranscriptionSegment struct {
 	CompressionRatio float32 `json:"compression_ratio"`
 	NoSpeechProb     float32 `json:"no_speech_prob"`
 	Words            []Word  `json:"words"`
+
+	Speaker     string `json:"speaker"`
+	IsAssistant bool   `json:"is_assistant"`
 }
 
 type Transcription struct {

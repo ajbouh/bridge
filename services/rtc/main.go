@@ -78,9 +78,16 @@ func main() {
 
 	port := 8088
 	transcriptionService := os.Getenv("TRANSCRIPTION_SERVICE")
+	translatorService := os.Getenv("TRANSLATOR_SERVICE")
 	if transcriptionService != "" {
 		go func() {
-			transcriber, err := stt.NewHTTPBackend(transcriptionService)
+			transcriber, err := stt.NewHTTPTranscriber(transcriptionService)
+			if err != nil {
+				logger.Error(err, "error creating http api")
+				panic(err)
+			}
+
+			translator, err := stt.NewHTTPTranslator(translatorService)
 			if err != nil {
 				logger.Error(err, "error creating http api")
 				panic(err)
@@ -88,6 +95,7 @@ func main() {
 
 			err = RunNewRoomTranscriber(
 				transcriber,
+				translator,
 				url.URL{Scheme: "ws", Host: fmt.Sprintf("localhost:%d", port), Path: "/ws"},
 				"test",
 			)
@@ -104,10 +112,11 @@ func main() {
 	}
 }
 
-func RunNewRoomTranscriber(transcriber stt.Transcriber, url url.URL, room string) error {
+func RunNewRoomTranscriber(transcriber stt.Transcriber, translator stt.Translator, url url.URL, room string) error {
 	transcriptionStream := make(chan stt.Transcription, 100)
 	sttEngine, err := stt.New(stt.EngineParams{
 		Transcriber: transcriber,
+		Translator:  translator,
 		OnDocumentUpdate: func(document stt.Document) {
 			transcriptionStream <- document.Transcriptions[len(document.Transcriptions)-1]
 		},
