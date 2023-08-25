@@ -4,7 +4,10 @@ import (
 	"flag"
 	"net/url"
 	"os"
+	"time"
 
+	"github.com/ajbouh/bridge/pkg/assistant"
+	"github.com/ajbouh/bridge/pkg/chat"
 	"github.com/ajbouh/bridge/pkg/client"
 	logr "github.com/ajbouh/bridge/pkg/log"
 
@@ -36,8 +39,31 @@ func main() {
 
 	url := url.URL{Scheme: "ws", Host: urlEnv, Path: "/ws"}
 
-	var transcriber stt.Transcriber
-	var translator stt.Translator
+	clientStream := make(chan stt.Document, 100)
+	docListeners := []chan stt.Document{
+		clientStream,
+	}
+	transcriptionStream := make(chan *stt.Transcription, 100)
+	audioStream := make(chan *stt.CapturedAudio, 100)
+
+	go func() {
+		document := stt.Document{
+			StartedAt: time.Now().Unix(),
+		}
+		for transcription := range transcriptionStream {
+			document.Transcriptions = append(document.Transcriptions, transcription)
+			snapshot := stt.Document{
+				StartedAt:      document.StartedAt,
+				Transcriptions: append([]*stt.Transcription{}, document.Transcriptions...),
+			}
+			for _, o := range docListeners {
+				o <- snapshot
+			}
+		}
+	}()
+
+	var transcriber *stt.HttpTranscriber
+	var translator *stt.HttpTranslator
 	var err error
 
 	transcriptionService := os.Getenv("TRANSCRIPTION_SERVICE")
@@ -46,6 +72,7 @@ func main() {
 		if err != nil {
 			logger.Fatal(err, "error creating http api")
 		}
+		go transcriber.Run(transcriptionStream, audioStream)
 	}
 
 	translatorService := os.Getenv("TRANSLATOR_SERVICE")
@@ -54,27 +81,25 @@ func main() {
 		if err != nil {
 			logger.Fatal(err, "error creating http api")
 		}
+		listener := make(chan stt.Document, 100)
+		docListeners = append(docListeners, listener)
+
+		go translator.Run(transcriptionStream, listener)
 	}
 
-	transcriptionStream := make(chan stt.Transcription, 100)
 
-	sttEngine, err := stt.New(stt.EngineParams{
-		Transcriber: transcriber,
-		Translator:  translator,
-		OnDocumentUpdate: func(document stt.Document) {
-			// Only send the last transcript.
-			transcriptionStream <- document.Transcriptions[len(document.Transcriptions)-1]
-		},
+	sttEngine, err := stt.New(func(a *stt.CapturedAudio) {
+		audioStream <- a
 	})
 	if err != nil {
 		logger.Fatal(err, "error creating saturday client")
 	}
 
 	sc, err := client.NewSaturdayClient(client.SaturdayConfig{
-		Url:                 url,
-		Room:                room,
-		SttEngine:           sttEngine,
-		TranscriptionStream: transcriptionStream,
+		Url:            url,
+		Room:           room,
+		SttEngine:      sttEngine,
+		DocumentStream: clientStream,
 	})
 	if err != nil {
 		logger.Fatal(err, "error creating saturday client")

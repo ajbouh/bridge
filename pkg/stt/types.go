@@ -1,11 +1,11 @@
 package stt
 
 type Transcriber interface {
-	Transcribe(audioData []float32) (Transcription, error)
+	Transcribe([]*CapturedAudio) (*Transcription, error)
 }
 
 type Translator interface {
-	Translate(audioData []float32, language string) (Transcription, error)
+	Translate(audio []*CapturedAudio, language string) (*Transcription, error)
 }
 
 type Word struct {
@@ -31,8 +31,20 @@ type TranscriptionSegment struct {
 	IsAssistant bool   `json:"is_assistant"`
 }
 
+type CapturedAudio struct {
+	PCM []float32 `json:"-"`
+
+	StartTimestamp uint64 `json:"startTimestamp"`
+	EndTimestamp   uint64 `json:"endTimestamp"`
+}
+
 type Transcription struct {
-	EndTimestamp        uint64              `json:"endTimestamp"`
+	AudioSources   []*CapturedAudio `json:"audio"`
+	StartTimestamp uint64           `json:"startTimestamp"`
+	EndTimestamp   uint64           `json:"endTimestamp"`
+
+	TranscriptSources []*Transcription `json:"-"`
+
 	Language            string              `json:"language"`
 	LanguageProbability float32             `json:"language_prob"`
 	Duration            float32             `json:"duration"`

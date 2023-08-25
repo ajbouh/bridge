@@ -25,6 +25,11 @@ export interface TranscriptSegment {
 export interface Transcript {
   language: string
   language_prob: number
+  audio: {
+    startTimestamp: number
+    endTimestamp: number
+  }[]
+  startTimestamp: number
   endTimestamp: number
   duration: number
   segments: TranscriptSegment[]
@@ -96,8 +101,8 @@ export function renderableTranscriptSession(transcriptions: Transcript[]): Rende
   let lastEntry: RenderedTranscriptEntry | undefined
   for (const transcript of transcriptions) {
     const transcriptEndTimestampS = transcript.endTimestamp / 1000
-    const transcriptStartTimestampMs = transcript.endTimestamp - (transcript.duration * 1000)
-    const transcriptStartTimestampS = transcriptEndTimestampS - transcript.duration
+    const transcriptStartTimestampMs = transcript.startTimestamp
+    const transcriptStartTimestampS = transcriptStartTimestampMs / 1000
     for (const segment of transcript.segments) {
       const sessionTimeMs = (segment.start * 1000) + transcriptStartTimestampMs
       const sessionTimeS = Math.floor(sessionTimeMs / 1000)

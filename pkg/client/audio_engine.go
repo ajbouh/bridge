@@ -37,7 +37,6 @@ type AudioEngine struct {
 	// slice to hold raw pcm data during decoding
 	incomingPCM []float32
 
-
 	firstTimeStamp  uint32
 	latestTimeStamp uint32
 	sttEngine       *stt.Engine
@@ -61,9 +60,9 @@ func NewAudioEngine(sttEngine *stt.Engine) (*AudioEngine, error) {
 	shouldInfer.Store(true)
 
 	ae := &AudioEngine{
-		rtpIn:       make(chan *rtp.Packet),
-		mediaOut:    make(chan media.Sample),
-		incomingPCM: make([]float32, incomingFrameSize),
+		rtpIn:          make(chan *rtp.Packet),
+		mediaOut:       make(chan media.Sample),
+		incomingPCM:    make([]float32, incomingFrameSize),
 		dec:            dec,
 		enc:            enc,
 		sttEngine:      sttEngine,
@@ -138,6 +137,7 @@ func (a *AudioEngine) decode() {
 
 		if pkt.Timestamp < a.latestTimeStamp {
 			Logger.Debug("Out of order packet!", pkt.Timestamp, "<", a.latestTimeStamp)
+			a.latestTimeStamp = pkt.Timestamp
 		} else {
 			a.latestTimeStamp = pkt.Timestamp
 		}

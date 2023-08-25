@@ -3,11 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"net/url"
-	"os"
 
-	"github.com/ajbouh/bridge/pkg/client"
-	stt "github.com/ajbouh/bridge/pkg/stt"
 	"github.com/ajbouh/bridge/services/rtc/internal/ws"
 
 	"github.com/gorilla/websocket"
@@ -77,34 +73,34 @@ func main() {
 	}))
 
 	port := 8088
-	transcriptionService := os.Getenv("TRANSCRIPTION_SERVICE")
-	translatorService := os.Getenv("TRANSLATOR_SERVICE")
-	if transcriptionService != "" {
-		go func() {
-			transcriber, err := stt.NewHTTPTranscriber(transcriptionService)
-			if err != nil {
-				logger.Error(err, "error creating http api")
-				panic(err)
-			}
+	// transcriptionService := os.Getenv("TRANSCRIPTION_SERVICE")
+	// translatorService := os.Getenv("TRANSLATOR_SERVICE")
+	// if transcriptionService != "" {
+	// 	go func() {
+	// 		transcriber, err := stt.NewHTTPTranscriber(transcriptionService)
+	// 		if err != nil {
+	// 			logger.Error(err, "error creating http api")
+	// 			panic(err)
+	// 		}
 
-			translator, err := stt.NewHTTPTranslator(translatorService)
-			if err != nil {
-				logger.Error(err, "error creating http api")
-				panic(err)
-			}
+	// 		translator, err := stt.NewHTTPTranslator(translatorService)
+	// 		if err != nil {
+	// 			logger.Error(err, "error creating http api")
+	// 			panic(err)
+	// 		}
 
-			err = RunNewRoomTranscriber(
-				transcriber,
-				translator,
-				url.URL{Scheme: "ws", Host: fmt.Sprintf("localhost:%d", port), Path: "/ws"},
-				"test",
-			)
-			if err != nil {
-				logger.Error(err, "error creating transcriber")
-				panic(err)
-			}
-		}()
-	}
+	// 		err = RunNewRoomTranscriber(
+	// 			transcriber,
+	// 			translator,
+	// 			url.URL{Scheme: "ws", Host: fmt.Sprintf("localhost:%d", port), Path: "/ws"},
+	// 			"test",
+	// 		)
+	// 		if err != nil {
+	// 			logger.Error(err, "error creating transcriber")
+	// 			panic(err)
+	// 		}
+	// 	}()
+	// }
 
 	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), nil)
 	if err != nil {
@@ -112,28 +108,28 @@ func main() {
 	}
 }
 
-func RunNewRoomTranscriber(transcriber stt.Transcriber, translator stt.Translator, url url.URL, room string) error {
-	transcriptionStream := make(chan stt.Transcription, 100)
-	sttEngine, err := stt.New(stt.EngineParams{
-		Transcriber: transcriber,
-		Translator:  translator,
-		OnDocumentUpdate: func(document stt.Document) {
-			transcriptionStream <- document.Transcriptions[len(document.Transcriptions)-1]
-		},
-	})
-	if err != nil {
-		return err
-	}
+// func RunNewRoomTranscriber(transcriber stt.Transcriber, translator stt.Translator, url url.URL, room string) error {
+// 	transcriptionStream := make(chan stt.Document, 100)
+// 	sttEngine, err := stt.New(stt.EngineParams{
+// 		Transcriber: transcriber,
+// 		Translator:  translator,
+// 		OnDocumentUpdate: func(document stt.Document) {
+// 			transcriptionStream <- document
+// 		},
+// 	})
+// 	if err != nil {
+// 		return err
+// 	}
 
-	sc, err := client.NewSaturdayClient(client.SaturdayConfig{
-		Url:                 url,
-		Room:                room,
-		SttEngine:           sttEngine,
-		TranscriptionStream: transcriptionStream,
-	})
-	if err != nil {
-		return err
-	}
+// 	sc, err := client.NewSaturdayClient(client.SaturdayConfig{
+// 		Url:                 url,
+// 		Room:                room,
+// 		SttEngine:           sttEngine,
+// 		TranscriptionStream: transcriptionStream,
+// 	})
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return sc.Start()
-}
+// 	return sc.Start()
+// }

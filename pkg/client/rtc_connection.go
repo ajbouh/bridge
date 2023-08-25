@@ -22,13 +22,13 @@ type RTCConnection struct {
 }
 
 type RTCConnectionParams struct {
-	trickleFn           func(*webrtc.ICECandidate, int) error
-	rtpChan             chan<- *rtp.Packet
-	transcriptionStream <-chan stt.Transcription
-	mediaIn             <-chan media.Sample
+	trickleFn      func(*webrtc.ICECandidate, int) error
+	rtpChan        chan<- *rtp.Packet
+	documentStream <-chan stt.Document
+	mediaIn        <-chan media.Sample
 }
 
-// FIXME if transcriptionStream AND mediaIn are not provided this will blow up
+// FIXME if documentStream AND mediaIn are not provided this will blow up
 func NewRTCConnection(params RTCConnectionParams) (*RTCConnection, error) {
 	rtc := &RTCConnection{
 		rtpIn:   params.rtpChan,
@@ -83,7 +83,7 @@ func NewRTCConnection(params RTCConnectionParams) (*RTCConnection, error) {
 		Logger.Info("mediaIn not provided... audio relay is disabled")
 	}
 
-	if params.transcriptionStream != nil {
+	if params.documentStream != nil {
 		ordered := true
 		maxRetransmits := uint16(0)
 
@@ -100,19 +100,21 @@ func NewRTCConnection(params RTCConnectionParams) (*RTCConnection, error) {
 		dc.OnOpen(func() {
 			Logger.Info("data channel opened...")
 
-			for transcription := range params.transcriptionStream {
+			for doc := range params.documentStream {
+				// Only send the last transcript.
+				transcription := doc.Transcriptions[len(doc.Transcriptions)-1]
 				data, err := json.Marshal(transcription)
 				if err != nil {
 					Logger.Error(err, "error marshalling transcript")
 					continue
 				}
-				Logger.Infof("sending transcript %+v on data channel", transcription)
+				Logger.Infof("sending transcript %s on data channel", string(data))
 				dc.Send(data)
 			}
 		})
 
 	} else {
-		Logger.Info("transcriptionStream not provided... transcription relay is disabled")
+		Logger.Info("documentStream not provided... transcription relay is disabled")
 	}
 
 	return rtc, nil

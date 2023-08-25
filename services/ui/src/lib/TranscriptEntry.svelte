@@ -30,9 +30,13 @@
   <div class="right" class:assistant={isAssistant}>
     <div class="name">{speakerLabel}</div>
     <div class="text">
-      {#each words as word}
-        <span on:click={() => console.log({word})}>{word.word}</span>
-      {/each}
+      {#if words}
+        {#each words as word}
+          <span on:click={() => console.log({word})}>{word.word}</span>
+        {/each}
+      {:else}
+        {text || ''}
+      {/if}
     </div>
   </div>
 </div>
@@ -49,7 +53,7 @@ export let sessionTime = 2
 export let speakerLabel = 'Eva'
 export let language = 'en'
 export let isAssistant = true
-export let text = `That's very meta. What problem does it solve?`
+export let text = ``
 export let words = []
 export let precedingSilence = 0
 

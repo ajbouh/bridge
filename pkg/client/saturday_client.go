@@ -22,7 +22,7 @@ type SaturdayConfig struct {
 
 	// channel used to send transcription segments over the data channel
 	// any transcription segment sent on this channel with be sent over the data channel
-	TranscriptionStream chan stt.Transcription
+	DocumentStream chan stt.Document
 }
 
 type SaturdayClient struct {
@@ -48,9 +48,9 @@ func NewSaturdayClient(config SaturdayConfig) (*SaturdayClient, error) {
 		trickleFn: func(candidate *webrtc.ICECandidate, target int) error {
 			return ws.SendTrickle(candidate, target)
 		},
-		rtpChan:             ae.RtpIn(),
-		transcriptionStream: config.TranscriptionStream,
-		mediaIn:             ae.MediaOut(),
+		rtpChan:        ae.RtpIn(),
+		documentStream: config.DocumentStream,
+		mediaIn:        ae.MediaOut(),
 	})
 	if err != nil {
 		return nil, err
