@@ -89,10 +89,10 @@ func main() {
 
 	llmService := os.Getenv("LLM_SERVICE")
 	if llmService != "" {
-		assist := &assistant.Assistant{
-			Name:   "Bridge",
-			Client: chat.NewClientWithConfig(chat.DefaultConfig(llmService)),
-		}
+		assist := assistant.New(
+			"Bridge",
+			chat.NewClientWithConfig(chat.DefaultConfig(llmService)),
+		)
 		if err != nil {
 			logger.Fatal(err, "error creating http api")
 		}

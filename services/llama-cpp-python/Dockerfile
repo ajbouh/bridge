@@ -11,9 +11,12 @@ RUN apt-get update \
 
 RUN python3 -m pip install --upgrade pip requests
 
+ARG MODEL_ACCOUNT
+ARG MODEL_TAG
+ARG MODEL_SEARCH
 COPY services/llama-cpp-python/hug_model.py .
 # RUN python3 ./hug_model.py -a TheBloke -t llama -s llama2_70b_chat_uncensored-GGML -f q4_K_S
-RUN python3 ./hug_model.py -a TheBloke -t llama -s Dolphin-Llama2-7B
+RUN python3 ./hug_model.py -a "${MODEL_ACCOUNT}" -t "${MODEL_TAG}" -s "${MODEL_SEARCH}"
 
 FROM base as dist
 
@@ -44,4 +47,4 @@ COPY --from=fetch /var/model/* /var/model/
 ENV MODEL=/var/model/model.bin
 
 # Run the server
-CMD python3 -m llama_cpp.server
+ENTRYPOINT ["python3", "-m", "llama_cpp.server"]

@@ -10,8 +10,14 @@ services:
   llama:
     build:
       dockerfile: ./services/llama-cpp-python/Dockerfile
+      args:
+        MODEL_ACCOUNT: TheBloke
+        MODEL_TAG: llama
+        MODEL_SEARCH: Dolphin-Llama2-7B
     ports:
       - "8089:8000"
+    command:
+      - "--n_gpu_layers=35"
     environment:
       USE_MLOCK: 0
     deploy:
