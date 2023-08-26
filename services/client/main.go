@@ -87,6 +87,19 @@ func main() {
 		go translator.Run(transcriptionStream, listener)
 	}
 
+	llmService := os.Getenv("LLM_SERVICE")
+	if llmService != "" {
+		assist := &assistant.Assistant{
+			Name:   "Bridge",
+			Client: chat.NewClientWithConfig(chat.DefaultConfig(llmService)),
+		}
+		if err != nil {
+			logger.Fatal(err, "error creating http api")
+		}
+		listener := make(chan stt.Document, 100)
+		docListeners = append(docListeners, listener)
+		go assist.Run(transcriptionStream, listener)
+	}
 
 	sttEngine, err := stt.New(func(a *stt.CapturedAudio) {
 		audioStream <- a
