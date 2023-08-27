@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
-  import { readable } from 'svelte/store'
+  import { readable, writable, readonly } from 'svelte/store'
   import { getMic, audioInputDeviceStore, getMedia } from '$lib/media'
-  import { Client } from "$lib/client";
+  import { Client, BridgeEvent } from "$lib/client";
   import TranscriptContainer from '$lib/TranscriptContainer.svelte'
   import type {
     TranscriptDocument,
@@ -11,15 +11,48 @@
     renderableTranscriptSession,
   } from '$lib/transcript'
 
-  let client
+  let client: Client
   let micEnabled = readable(false)
-  let transcription = readable<TranscriptDocument[]>(undefined)
   let audioInputDevices = readable([])
 
   let toggleMic = () => {}
-  let setMicTrack = async (deviceId) => {}
+  let setMicTrack = async (deviceId: string) => {}
+
+  let transcriptionWr = writable<TranscriptDocument[]>([])
+  let transcription = readonly(transcriptionWr)
+
+  let participants
 
   let transcriptElt
+
+  function onBridgeEvent(ev: BridgeEvent) {
+    switch (ev.type) {
+      case 'status':
+        ({participants} = ev.detail);
+        break
+      case 'transcription':
+        let added = false
+        const transcription = ev.detail
+        transcriptionWr.update(arr => {
+          const next = []
+          for (const ex of arr) {
+            if (ex.id === transcription.id) {
+              next.push(transcription)
+              added = true
+            } else {
+              next.push(ex)
+            }
+          }
+          if (!added) {
+            next.push(transcription)
+            added = true
+          }
+
+          return next
+        });
+      break
+    }
+  }
 
   onMount(() => {
     let mediaDevices
@@ -45,9 +78,8 @@
       getMedia(mediaDevices).then(stream => {
         console.log(stream.getTracks());
 
-        client = new Client(stream, noPub, noSub, room, url);
+        client = new Client(stream, noPub, noSub, room, url, onBridgeEvent);
         micEnabled = client.micEnabled
-        transcription = client.transcription
         toggleMic = () => client.toggleMic()
         setMicTrack = async (deviceId) => {
           const mic = await getMic(mediaDevices, deviceId)

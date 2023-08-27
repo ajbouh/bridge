@@ -37,6 +37,15 @@ type ChatCompletionMessage struct {
 	FunctionCall *FunctionCall `json:"function_call,omitempty"`
 }
 
+func (m *ChatCompletionMessage) TokenLength() int {
+	strlen := len(m.Name) + 2 + len(m.Content)
+	if m.FunctionCall != nil {
+		// increase by extra JSON overhead
+		strlen += 9 + len(m.FunctionCall.Name) + len(m.FunctionCall.Arguments)
+	}
+	return strlen / 3 // HACK this is an estimate!
+}
+
 type FunctionCall struct {
 	Name string `json:"name,omitempty"`
 	// call function with arguments in JSON format
@@ -62,6 +71,10 @@ type ChatCompletionRequest struct {
 	User         string               `json:"user,omitempty"`
 	Functions    []FunctionDefinition `json:"functions,omitempty"`
 	FunctionCall any                  `json:"function_call,omitempty"`
+}
+
+func (r *ChatCompletionRequest) InsertMessagesAt(i int, more ...ChatCompletionMessage) {
+	r.Messages = append(r.Messages[:i], append(more, r.Messages[i:]...)...)
 }
 
 type FunctionDefinition struct {

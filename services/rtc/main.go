@@ -77,13 +77,13 @@ func main() {
 	// translatorService := os.Getenv("TRANSLATOR_SERVICE")
 	// if transcriptionService != "" {
 	// 	go func() {
-	// 		transcriber, err := stt.NewHTTPTranscriber(transcriptionService)
+	// 		transcriber, err := asr.NewHTTPTranscriber(transcriptionService)
 	// 		if err != nil {
 	// 			logger.Error(err, "error creating http api")
 	// 			panic(err)
 	// 		}
 
-	// 		translator, err := stt.NewHTTPTranslator(translatorService)
+	// 		translator, err := asr.NewHTTPTranslator(translatorService)
 	// 		if err != nil {
 	// 			logger.Error(err, "error creating http api")
 	// 			panic(err)
@@ -108,12 +108,12 @@ func main() {
 	}
 }
 
-// func RunNewRoomTranscriber(transcriber stt.Transcriber, translator stt.Translator, url url.URL, room string) error {
-// 	transcriptionStream := make(chan stt.Document, 100)
-// 	sttEngine, err := stt.New(stt.EngineParams{
+// func RunNewRoomTranscriber(transcriber asr.Transcriber, translator asr.Translator, url url.URL, room string) error {
+// 	transcriptionStream := make(chan asr.Document, 100)
+// 	asrEngine, err := asr.New(asr.EngineParams{
 // 		Transcriber: transcriber,
 // 		Translator:  translator,
-// 		OnDocumentUpdate: func(document stt.Document) {
+// 		OnDocumentUpdate: func(document asr.Document) {
 // 			transcriptionStream <- document
 // 		},
 // 	})
@@ -121,10 +121,10 @@ func main() {
 // 		return err
 // 	}
 
-// 	sc, err := client.NewSaturdayClient(client.SaturdayConfig{
+// 	sc, err := client.New(client.Config{
 // 		Url:                 url,
 // 		Room:                room,
-// 		SttEngine:           sttEngine,
+// 		ASREngine:           asrEngine,
 // 		TranscriptionStream: transcriptionStream,
 // 	})
 // 	if err != nil {

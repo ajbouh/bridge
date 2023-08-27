@@ -1,25 +1,51 @@
 version: "3.8"
 
 services:
-  web_server:
+  web:
     build:
       dockerfile: ./services/rtc/Dockerfile
     ports:
       - "8088:8088"
 
-  llama:
+  rtc-peer:
+    restart: "on-failure"
     build:
-      dockerfile: ./services/llama-cpp-python/Dockerfile
+      dockerfile: ./services/rtc-peer/Dockerfile
+    depends_on:
+      - web
+      - asr-faster-whisper
+      # - asr-seamlessm4t
+      - asr-seamlessm4t
+      - chat-llama-cpp-python
+    environment:
+      BRIDGE_WEBRTC_URL: web:8088
+      BRIDGE_WEBRTC_ROOM: test
+      BRIDGE_TRANSCRIPTION: http://asr-faster-whisper:8000/v1/transcribe
+      # BRIDGE_TRANSLATOR_audio_en: http://asr-faster-whisper:8000/v1/transcribe
+      BRIDGE_TRANSLATOR_text_eng_en: http://asr-seamlessm4t:8000/v1/transcribe
+      # TRANSCRIPTION_SERVICE: http://asr-whisperx:8000/transcribe
+      # TRANSLATOR_SERVICE: http://asr-seamlessm4t:8000/translate
+      BRIDGE_ASSISTANT_Bridge: http://chat-llama-cpp-python:8000/v1
+
+  chat-llama-cpp-python:
+    build:
+      dockerfile: docker/cuda_simple/Dockerfile
+      context: ./services/chat-llama-cpp-python
       args:
         MODEL_ACCOUNT: TheBloke
         MODEL_TAG: llama
-        MODEL_SEARCH: Dolphin-Llama2-7B
     ports:
       - "8089:8000"
     command:
       - "--n_gpu_layers=35"
+      - "--hf_model=TheBloke/Airoboros-L2-13B-2.2-GGUF/airoboros-l2-13b-2.2.Q5_K_M.gguf"
+      - "--n_gpu_layers=43"
     environment:
       USE_MLOCK: 0
+      TORCH_HOME: /cache/torch
+      CUDA_DEVICE_ORDER: PCI_BUS_ID
+      CUDA_VISIBLE_DEVICES: 1,0
+      HF_HOME: /cache/huggingface
     deploy:
       resources:
         reservations:
@@ -27,33 +53,22 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    volumes:
+    - torch-cache:/cache/torch
+    - huggingface-cache:/cache/huggingface
 
-  audio_client_parser:
+  asr-faster-whisper:
     restart: "on-failure"
     build:
-      dockerfile: ./services/client/Dockerfile
-    depends_on:
-      - web_server
-      - transcription_service
-    environment:
-      URL: web_server:8088
-      ROOM: test
-      TRANSCRIPTION_SERVICE: http://transcription_service:8000/transcribe
-      TRANSLATOR_SERVICE: http://transcription_service:8000/translate
-      LLM_SERVICE: http://llama:8000/v1
-
-  transcription_service:
-    restart: "on-failure"
-    build:
-      context: ./services/transcribe
-      args:
-        MODEL_SIZE: large-v2
+      dockerfile: ./services/asr-faster-whisper/Dockerfile
     environment:
       MODEL_SIZE: large-v2
       MODEL_DEVICE: cuda
       MODEL_COMPUTE_TYPE: float16
-    depends_on:
-      - web_server
+      TORCH_HOME: /cache/torch
+      CUDA_DEVICE_ORDER: PCI_BUS_ID
+      CUDA_VISIBLE_DEVICES: 0
+      HF_HOME: /cache/huggingface
     deploy:
       resources:
         reservations:
@@ -61,3 +76,32 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    volumes:
+    - torch-cache:/cache/torch
+    - huggingface-cache:/cache/huggingface
+
+
+  asr-seamlessm4t:
+    restart: "on-failure"
+    build:
+      dockerfile: ./services/asr-seamlessm4t/Dockerfile
+    environment:
+      MODEL_SIZE: seamlessM4T_large
+      MODEL_DEVICE: cuda
+      MODEL_COMPUTE_TYPE: float32
+      TORCH_HOME: /cache/torch
+      HF_HOME: /cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+    - torch-cache:/cache/torch
+    - huggingface-cache:/cache/huggingface
+
+volumes:
+  torch-cache: {}
+  huggingface-cache: {}

@@ -1,5 +1,6 @@
 import type { Writable, Readable } from 'svelte/store'
 import { writable, readonly } from 'svelte/store'
+import { Transcript } from './transcript';
 
 function generateRandomString(length) {
   const characters =
@@ -19,11 +20,28 @@ function decodeDatachannelMessage(data) {
   return json
 }
 
+interface BridgeEvent0<T extends string, D=unknown> {
+  type: T
+  detail: D
+}
+
+interface Status {
+  
+}
+
+export type TranscriptionEvent = BridgeEvent0<'transcription', Transcript[]>
+export type StatusEvent = BridgeEvent0<'status', Status>
+
+export type BridgeEvent = TranscriptionEvent | StatusEvent
+export type BridgeEventHandler<T extends BridgeEvent=BridgeEvent> = (event: T) => void
+
+
 export class Client {
   micEnabled: Readable<boolean>
   micEnabledWr: Writable<boolean>
-  transcription: Readable<string>
-  transcriptionWr: Writable<string>
+
+  onEvent: BridgeEventHandler
+
   noPub: boolean
   noSub: boolean
   room: string
@@ -37,7 +55,7 @@ export class Client {
   url: string
   socket: WebSocket | undefined
 
-  constructor(stream: MediaStream, noPub: boolean, noSub: boolean, room: string, url: string) {
+  constructor(stream: MediaStream, noPub: boolean, noSub: boolean, room: string, url: string, onEvent: BridgeEventHandler) {
     const configuration = {
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     };
@@ -47,14 +65,12 @@ export class Client {
     this.noSub = noSub;
     this.room = room;
     this.url = url
+    this.onEvent = onEvent
 
     const mic = this.stream.getAudioTracks()[0]
 
     this.micEnabledWr = writable(mic?.enabled)
     this.micEnabled = readonly(this.micEnabledWr)
-
-    this.transcriptionWr = writable([])
-    this.transcription = readonly(this.transcriptionWr)
 
     this.pubCandidates = [];
     if (!noPub) {
@@ -106,10 +122,11 @@ export class Client {
       this.sub.ondatachannel = (e) => {
         const { channel } = e;
         console.log("got chan", channel);
-        if (channel.label === "transcriptions") {
+        if (channel.label === "events") {
           channel.onmessage = (msg) => {
             console.log("got chan message", msg)
-            this.transcriptionWr.update(arr => (arr.push(decodeDatachannelMessage(msg.data)), arr));
+            const event = decodeDatachannelMessage(msg.data)
+            this.onEvent(event)
           };
         }
       };

@@ -25,12 +25,14 @@ export interface TranscriptSegment {
 export interface Transcript {
   language: string
   language_prob: number
+  id: string
+  final: boolean
   audio: {
-    startTimestamp: number
-    endTimestamp: number
+    start: number
+    end: number
   }[]
-  startTimestamp: number
-  endTimestamp: number
+  start: number
+  end: number
   duration: number
   segments: TranscriptSegment[]
 }
@@ -62,6 +64,7 @@ export interface RenderedTranscriptEntry {
   precedingSilence: number
   sessionTime: number
   speakerLabel: string
+  final: boolean
   text: string
   words: RenderedTranscriptWord[]
   debug: {
@@ -100,8 +103,8 @@ export function renderableTranscriptSession(transcriptions: Transcript[]): Rende
   let lastSegmentSessionEndTimeS
   let lastEntry: RenderedTranscriptEntry | undefined
   for (const transcript of transcriptions) {
-    const transcriptEndTimestampS = transcript.endTimestamp / 1000
-    const transcriptStartTimestampMs = transcript.startTimestamp
+    const transcriptEndTimestampS = transcript.end / 1000
+    const transcriptStartTimestampMs = transcript.start
     const transcriptStartTimestampS = transcriptStartTimestampMs / 1000
     for (const segment of transcript.segments) {
       const sessionTimeMs = (segment.start * 1000) + transcriptStartTimestampMs
@@ -112,14 +115,19 @@ export function renderableTranscriptSession(transcriptions: Transcript[]): Rende
           lastEntry.speakerLabel === segment.speaker &&
           lastEntry.isAssistant === segment.is_assistant &&
           lastEntry.language === transcript.language &&
+          lastEntry.final === transcript.final &&
+          (lastEntry.words == null) === (segment.words == null) &&
           precedingSilence < 1) {
         lastEntry.text += segment.text || ''
-        lastEntry.words = lastEntry.words.concat(segment.words)
+        if (lastEntry.words) {
+          lastEntry.words = lastEntry.words.concat(segment.words)
+        }
         lastEntry.debug.push({ precedingSilence, transcript, sessionTimeMs, sessionTime: sessionTimeS, transcriptEndTimestamp: transcriptEndTimestampS, transcriptStartTimestamp: transcriptStartTimestampS, segment })
       } else {
         participants.add(segment.speaker)
         lastEntry = {
           speakerLabel: segment.speaker,
+          final: transcript.final,
           isAssistant: segment.is_assistant || false,
           language: transcript.language,
           precedingSilence,

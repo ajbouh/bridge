@@ -29,7 +29,7 @@
   <div class="line" style="background-color: {lineColor}" />
   <div class="right" class:assistant={isAssistant}>
     <div class="name">{speakerLabel}</div>
-    <div class="text">
+    <div class="text" class:text-gray-400={!final}>
       {#if words}
         {#each words as word}
           <span on:click={() => console.log({word})}>{word.word}</span>
@@ -55,6 +55,7 @@ export let language = 'en'
 export let isAssistant = true
 export let text = ``
 export let words = []
+export let final = true
 export let precedingSilence = 0
 
 $: precedingSilenceClass = precedingSilence <= 0.5
